@@ -1,0 +1,9 @@
+# WiFi and server settings of each sketch
+secrets.h
+
+# Arduino IDE / arduino-cli build output
+build/
+*.bin
+*.elf
+.vscode/
+.claude/
