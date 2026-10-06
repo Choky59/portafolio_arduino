@@ -3,7 +3,8 @@
 // La llave del sensor NO va aqui: el ESP32 la obtiene con el codigo de vinculacion
 // y la guarda en su memoria interna.
 
-#pragma once
+#ifndef SECRETS_H
+#define SECRETS_H
 
 #define WIFI_SSID     "nombre-de-tu-wifi"
 #define WIFI_PASSWORD "contrasena-de-tu-wifi"
@@ -23,3 +24,5 @@ static const char ROOT_CA[] = R"PEM(
 PEGA_AQUI_EL_CERTIFICADO_RAIZ
 -----END CERTIFICATE-----
 )PEM";
+
+#endif  // SECRETS_H
