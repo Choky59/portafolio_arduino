@@ -8,7 +8,17 @@ Firmware de los proyectos del portafolio de Jorge García ("haciendo proyectos h
 
 ## sensor_temperatura
 
-Mide temperatura y humedad con un DHT11 y las envía cada 30 segundos al dashboard en vivo.
+Mide temperatura y humedad con un DHT11 y las envía cada 30 segundos al dashboard en vivo. Entre lecturas el ESP32 duerme (deep sleep) para que las baterías duren más.
+
+### Cómo funciona el ciclo
+
+1. **Despierta** por el temporizador del ESP32.
+2. **Lee el sensor** antes de prender el WiFi, que es lo que más energía gasta.
+3. **Conecta al WiFi.** Usa el canal y el router de la vez anterior, guardados en la memoria RTC, que sobrevive al sueño, y así reconecta más rápido. Si no los encuentra, busca el router de nuevo.
+4. **Envía la lectura** por HTTPS con su llave.
+5. **Duerme** lo que falte para completar 30 s, contando el tiempo que estuvo despierto.
+
+Si el WiFi falla, duerme igual y reintenta en el siguiente ciclo. A 30 segundos el ahorro es moderado, porque cada ciclo reconecta el WiFi. Para que la batería dure mucho más, sube `INTERVALO_MS` en el sketch; si lo haces, ajusta también en el backend el tiempo tras el cual el dashboard muestra el sensor como fuera de línea (`OFFLINE_AFTER_MS`, hoy 2 minutos).
 
 ### Conexiones
 
@@ -41,17 +51,23 @@ Desde el Gestor de librerías del Arduino IDE:
 2. Sube el sketch y abre el Monitor Serie a **115200** baudios.
 3. Escribe el código que te dio el panel (por ejemplo `K7QM-4XRT`) y presiona Enter.
 
-El ESP32 canjea el código por su propia llave secreta y la guarda en su memoria (NVS). El código dura 10 minutos y sirve una sola vez.
+Mientras no tenga llave, el ESP32 **no se duerme**: se queda despierto esperando el código. Cuando lo canjea por su propia llave secreta, la guarda en su memoria (NVS) y empieza el ciclo de medir, enviar y dormir. El código dura 10 minutos y sirve una sola vez.
 
 **Por qué funciona así:** el código de este repo es público, pero ninguna llave vive en él. Cada sensor tiene la suya y se puede revocar desde el panel sin afectar a los demás. Si revocas o borras el sensor, el ESP32 lo detecta, borra su llave y vuelve a pedir un código.
 
 ### Comandos por Serial
 
+Mientras duerme, el ESP32 no escucha el Monitor Serie. Los comandos funcionan en dos momentos:
+- **Al encenderlo o presionar EN/RESET:** hay **5 segundos** para escribirlos. Al despertar del sueño no se esperan, para no gastar batería.
+- **Sin llave:** en cualquier momento, porque se queda despierto esperando el código.
+
 | Comando | Qué hace |
 |---|---|
-| `K7QM-4XRT` (el código) | Vincula el sensor |
-| `estado` | Muestra el firmware, el servidor, la IP y el ID del sensor |
+| `K7QM-4XRT` (el código) | Vincula el sensor (solo sin llave) |
+| `estado` | Muestra el firmware, el servidor, el intervalo y el ID del sensor |
 | `olvidar` | Borra la llave guardada para volver a vincularlo |
+
+**Para revincular un sensor que ya duerme:** presiona EN/RESET, escribe `olvidar` en los primeros 5 segundos y después el código nuevo.
 
 ### Probar en tu red local
 
